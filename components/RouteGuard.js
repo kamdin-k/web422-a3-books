@@ -1,17 +1,16 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import { useAtom } from "jotai";
-import { favouritesAtom, searchHistoryAtom } from "@/store";
-import { isAuthenticated } from "@/lib/authenticate";
+import { favouritesAtom, searchHistoryAtom, userAtom } from "@/store";
+import { isAuthenticated, readToken } from "@/lib/authenticate";
 import { getFavourites } from "@/lib/userData";
 
 export default function RouteGuard({ children }) {
   const router = useRouter();
   const [, setFavouritesList] = useAtom(favouritesAtom);
   const [, setSearchHistory] = useAtom(searchHistoryAtom);
+  const [, setUser] = useAtom(userAtom);
 
-  // Only /login, /register, /about are public.
-  // (If you want the search page to be public too, add "/" here.)
   const publicPaths = ["/login", "/register", "/about"];
 
   function authCheck(url) {
@@ -22,9 +21,11 @@ export default function RouteGuard({ children }) {
   }
 
   useEffect(() => {
-    // load favourites + search history from API / localStorage
     const loadAppState = async () => {
       if (isAuthenticated()) {
+        // set user from token
+        setUser(readToken());
+
         try {
           const favs = await getFavourites();
           setFavouritesList(favs || []);
@@ -33,6 +34,7 @@ export default function RouteGuard({ children }) {
           setFavouritesList([]);
         }
       } else {
+        setUser(null);
         setFavouritesList([]);
       }
 
@@ -48,7 +50,7 @@ export default function RouteGuard({ children }) {
     authCheck(router.asPath);
     loadAppState();
 
-    // run on every route change (after login/logout, going to /books, /favourites, etc.)
+    // re-run on every route change (after login/logout, going to /books, etc.)
     const handleRouteChange = (url) => {
       authCheck(url);
       loadAppState();
@@ -58,7 +60,7 @@ export default function RouteGuard({ children }) {
     return () => {
       router.events.off("routeChangeComplete", handleRouteChange);
     };
-  }, [router, router.events, setFavouritesList, setSearchHistory]);
+  }, [router, router.events, setFavouritesList, setSearchHistory, setUser]);
 
   return children;
 }

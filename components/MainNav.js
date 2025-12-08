@@ -1,82 +1,70 @@
-import { useEffect, useState } from "react";
+// components/MainNav.js
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Navbar, Nav, Container, NavDropdown } from "react-bootstrap";
+import { Navbar, Nav, NavDropdown, Container } from "react-bootstrap";
 import { useAtom } from "jotai";
-import { userAtom, favouritesAtom } from "@/store";
-import { isAuthenticated, readToken, removeToken } from "@/lib/authenticate";
+import { userAtom, favouritesAtom, searchHistoryAtom } from "@/store";
+import { removeToken, readToken } from "@/lib/authenticate";
 
 export default function MainNav() {
   const router = useRouter();
   const [user, setUser] = useAtom(userAtom);
-  const [, setFavouritesList] = useAtom(favouritesAtom);
+  const [, setFavourites] = useAtom(favouritesAtom);
+  const [, setSearchHistory] = useAtom(searchHistoryAtom);
 
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [displayName, setDisplayName] = useState("");
-
-  useEffect(() => {
-    const logged = isAuthenticated();
-    setLoggedIn(logged);
-
-    if (logged) {
-      const tokenData = readToken();
-      const name = tokenData?.userName || user?.userName || "User";
-      setDisplayName(name);
-      if (!user || user.userName !== name) {
-        setUser({ userName: name });
-      }
-    } else {
-      setDisplayName("");
-    }
-  }, [setUser, user]);
-
-  function handleLogout() {
+  const logout = () => {
     removeToken();
     setUser(null);
-    setFavouritesList([]);
-    setLoggedIn(false);
-    setDisplayName("");
+    setFavourites([]);
+    setSearchHistory([]);
     router.push("/login");
-  }
+  };
+
+  const displayUserName =
+    user?.userName || readToken()?.userName || "User";
 
   return (
-    <Navbar bg="dark" variant="dark" expand="lg" className="fixed-top">
+    <Navbar bg="dark" variant="dark" expand="lg" fixed="top">
       <Container>
-        <Navbar.Brand as={Link} href="/">
-          Kamdin Kianpour
-        </Navbar.Brand>
+        <Link href="/" passHref legacyBehavior>
+          <Navbar.Brand>Kamdin Kianpour</Navbar.Brand>
+        </Link>
 
         <Navbar.Toggle aria-controls="main-navbar-nav" />
-
         <Navbar.Collapse id="main-navbar-nav">
           <Nav className="me-auto">
-            <Nav.Link as={Link} href="/about">
-              About
-            </Nav.Link>
+            <Link href="/about" passHref legacyBehavior>
+              <Nav.Link active={router.pathname === "/about"}>
+                About
+              </Nav.Link>
+            </Link>
           </Nav>
 
-          <Nav className="ms-auto">
-            {!loggedIn && (
+          <Nav>
+            {!user ? (
               <>
-                <Nav.Link as={Link} href="/login">
-                  Login
-                </Nav.Link>
-                <Nav.Link as={Link} href="/register">
-                  Register
-                </Nav.Link>
+                <Link href="/login" passHref legacyBehavior>
+                  <Nav.Link active={router.pathname === "/login"}>
+                    Login
+                  </Nav.Link>
+                </Link>
+                <Link href="/register" passHref legacyBehavior>
+                  <Nav.Link active={router.pathname === "/register"}>
+                    Register
+                  </Nav.Link>
+                </Link>
               </>
-            )}
-
-            {loggedIn && (
+            ) : (
               <NavDropdown
+                title={displayUserName}
                 align="end"
-                title={displayName}
                 id="user-nav-dropdown"
               >
-                <NavDropdown.Item as={Link} href="/favourites">
-                  Favourites
-                </NavDropdown.Item>
-                <NavDropdown.Item onClick={handleLogout}>
+                <Link href="/favourites" passHref legacyBehavior>
+                  <NavDropdown.Item>Favourites</NavDropdown.Item>
+                </Link>
+                <NavDropdown.Divider />
+                <NavDropdown.Item onClick={logout}>
                   Logout
                 </NavDropdown.Item>
               </NavDropdown>
