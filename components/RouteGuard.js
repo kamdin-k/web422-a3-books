@@ -1,56 +1,51 @@
-import { getToken } from "./authenticate";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
+import { useAtom } from "jotai";
+import { favouritesAtom, searchHistoryAtom } from "@/store";
+import { isAuthenticated } from "@/lib/authenticate";
+import { getFavourites } from "@/lib/userData";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+export default function RouteGuard({ children }) {
+  const router = useRouter();
+  const [, setFavouritesList] = useAtom(favouritesAtom);
+  const [, setSearchHistory] = useAtom(searchHistoryAtom);
 
-async function apiRequest(method, path) {
-  try {
-    const token = getToken();
-    if (!token) return [];
-
-    const res = await fetch(`${API_URL}${path}`, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `JWT ${token}`
-      }
-    });
-
-    if (res.status === 200) {
-      return await res.json();
-    } else {
-      return [];
+  function authCheck(url) {
+    const publicPaths = ["/login", "/register", "/about"];
+    const path = url.split("?")[0];
+    if (!publicPaths.includes(path) && !isAuthenticated()) {
+      router.push("/login");
     }
-  } catch {
-    return [];
   }
-}
 
-export async function getFavourites() {
-  return apiRequest("GET", "/favourites");
-}
+  useEffect(() => {
+    async function init() {
+      if (isAuthenticated()) {
+        const favs = await getFavourites();
+        setFavouritesList(favs);
+      }
+      if (typeof window !== "undefined") {
+        const history = localStorage.getItem("history");
+        if (history) {
+          setSearchHistory(JSON.parse(history));
+        }
+      }
+    }
 
-export async function addToFavourites(id) {
-  return apiRequest("PUT", `/favourites/${id}`);
-}
+    init();
+    authCheck(router.pathname);
 
-export async function removeFromFavourites(id) {
-  return apiRequest("DELETE", `/favourites/${id}`);
-}
+    const handleRouteChange = (url) => {
+      authCheck(url);
+      init();
+    };
 
-export function getHistory() {
-  if (typeof window === "undefined") return [];
-  const history = localStorage.getItem("history");
-  return history ? JSON.parse(history) : [];
-}
+    router.events.on("routeChangeComplete", handleRouteChange);
 
-export function addHistory(entry) {
-  if (typeof window === "undefined") return;
-  const history = getHistory();
-  history.push(entry);
-  localStorage.setItem("history", JSON.stringify(history));
-}
+    return () => {
+      router.events.off("routeChangeComplete", handleRouteChange);
+    };
+  }, [router.pathname, router.events, setFavouritesList, setSearchHistory]);
 
-export function clearHistory() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem("history");
+  return children;
 }
