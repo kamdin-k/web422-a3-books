@@ -1,127 +1,74 @@
-import { useForm } from "react-hook-form";
-import { useRouter } from "next/router";
 import { useState } from "react";
+import { useRouter } from "next/router";
+import { registerUser } from "@/lib/authenticate";
+import { Alert, Form, Button } from "react-bootstrap";
 
 export default function Register() {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
-
   const router = useRouter();
-  const [serverError, setServerError] = useState(null);
+
+  const [user, setUser] = useState("");
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = async (data) => {
-    setServerError(null);
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setErrorMsg("");
     setLoading(true);
 
-    const payload = {
-      userName: data.userName,
-      password: data.password,
-      password2: data.confirmPassword, 
-    };
-
-    console.log("Submitting registration payload:", payload);
-
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const json = await res.json().catch(() => ({}));
-
-      console.log("Register response:", res.status, json);
-
-      if (!res.ok) {
-        // API returns { message: "some error" }
-        setServerError(json.message || "Registration failed");
-        setLoading(false);
-        return;
-      }
-
-      // If everything is good, go to login
+      await registerUser(user, password, password2);
       router.push("/login");
     } catch (err) {
-      console.error("Network / fetch error:", err);
-      setServerError("Network error, please try again.");
+      console.error(err);
+      setErrorMsg(err.message || "Unable to register");
+    } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="container mt-5">
+    <>
       <h1>Register</h1>
-      <p className="text-muted">
-        Create a new account for the Books app.
-      </p>
 
-      {serverError && (
-        <div className="alert alert-danger" role="alert">
-          {serverError}
-        </div>
-      )}
+      {errorMsg && <Alert variant="danger">{errorMsg}</Alert>}
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <div className="mb-3">
-          <label className="form-label">User Name</label>
-          <input
-            className="form-control"
-            {...register("userName", { required: "User name is required" })}
+      <Form onSubmit={handleSubmit}>
+        <Form.Group className="mb-3" controlId="userName">
+          <Form.Label>User Name</Form.Label>
+          <Form.Control
+            type="text"
+            value={user}
+            onChange={(e) => setUser(e.target.value)}
+            required
           />
-          {errors.userName && (
-            <div className="text-danger">{errors.userName.message}</div>
-          )}
-        </div>
+        </Form.Group>
 
-        <div className="mb-3">
-          <label className="form-label">Password</label>
-          <input
+        <Form.Group className="mb-3" controlId="password">
+          <Form.Label>Password</Form.Label>
+          <Form.Control
             type="password"
-            className="form-control"
-            {...register("password", {
-              required: "Password is required",
-              minLength: {
-                value: 6,
-                message: "Password must be at least 6 characters",
-              },
-            })}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
           />
-          {errors.password && (
-            <div className="text-danger">{errors.password.message}</div>
-          )}
-        </div>
+        </Form.Group>
 
-        <div className="mb-3">
-          <label className="form-label">Confirm Password</label>
-          <input
+        <Form.Group className="mb-3" controlId="password2">
+          <Form.Label>Confirm Password</Form.Label>
+          <Form.Control
             type="password"
-            className="form-control"
-            {...register("confirmPassword", {
-              required: "Please confirm your password",
-            })}
+            value={password2}
+            onChange={(e) => setPassword2(e.target.value)}
+            required
           />
-          {errors.confirmPassword && (
-            <div className="text-danger">{errors.confirmPassword.message}</div>
-          )}
-        </div>
+        </Form.Group>
 
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={loading}
-        >
+        <Button type="submit" variant="primary" disabled={loading}>
           {loading ? "Registering..." : "Register"}
-        </button>
-      </form>
-    </div>
+        </Button>
+      </Form>
+    </>
   );
 }
