@@ -25,7 +25,7 @@ export default function Register() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/register`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/user/register`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -33,18 +33,19 @@ export default function Register() {
         }
       );
 
-      let json = {};
-      try {
-        json = await res.json();
-      } catch (_) {
-        json = {};
-      }
-
       if (!res.ok) {
-        const msg =
-          typeof json.message === "string"
-            ? json.message
-            : JSON.stringify(json.message || "Registration failed");
+        let msg = "Registration failed";
+        try {
+          const json = await res.json();
+          msg =
+            json.message ||
+            json.error ||
+            (Array.isArray(json.errors) && json.errors[0]?.msg) ||
+            msg;
+          console.log("Register API response:", res.status, json);
+        } catch (e) {
+          console.log("Error parsing JSON from register:", e);
+        }
         setServerError(msg);
         setLoading(false);
         return;
@@ -52,6 +53,7 @@ export default function Register() {
 
       router.push("/login");
     } catch (err) {
+      console.error("Network error:", err);
       setServerError("Network error, please try again.");
       setLoading(false);
     }
@@ -63,9 +65,7 @@ export default function Register() {
       <p className="text-muted">Create a new account for the Books app.</p>
 
       {serverError && (
-        <div className="alert alert-danger" role="alert">
-          {serverError}
-        </div>
+        <div className="alert alert-danger">{serverError}</div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -90,9 +90,6 @@ export default function Register() {
               minLength: { value: 6, message: "Minimum 6 characters" }
             })}
           />
-          {errors.password && (
-            <div className="text-danger">{errors.password.message}</div>
-          )}
         </div>
 
         <div className="mb-3">
@@ -104,18 +101,9 @@ export default function Register() {
               required: "Please confirm your password"
             })}
           />
-          {errors.confirmPassword && (
-            <div className="text-danger">
-              {errors.confirmPassword.message}
-            </div>
-          )}
         </div>
 
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={loading}
-        >
+        <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? "Registering..." : "Register"}
         </button>
       </form>
