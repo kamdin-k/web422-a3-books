@@ -2,13 +2,12 @@ import PageHeader from '@/components/PageHeader';
 import BookDetails from '@/components/BookDetails';
 
 export async function getStaticProps() {
-  const WORK_ID = 'OL453657W'; // The Colour of Magic (example)
+  const WORK_ID = 'OL453657W'; 
   try {
     const res = await fetch(`https://openlibrary.org/works/${WORK_ID}.json`);
     const book = await res.json();
     return { props: { book }, revalidate: 3600 };
   } catch (err) {
-    // Fallback content if fetch fails
     return {
       props: {
         book: {

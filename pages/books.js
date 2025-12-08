@@ -18,7 +18,7 @@ export default function Books() {
   );
 
   useEffect(() => {
-    setPage(1); // reset page when query changes
+    setPage(1); 
   }, [qs]);
 
   useEffect(() => {
