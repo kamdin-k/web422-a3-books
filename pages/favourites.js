@@ -1,10 +1,21 @@
+// pages/favourites.js
+import { useEffect } from "react";
 import { useAtom } from "jotai";
 import { favouritesAtom } from "@/store";
 import PageHeader from "@/components/PageHeader";
 import BookCard from "@/components/BookCard";
+import { getFavourites } from "@/lib/userData";
 
 export default function Favourites() {
-  const [favouritesList] = useAtom(favouritesAtom);
+  const [favouritesList, setFavouritesList] = useAtom(favouritesAtom);
+
+  useEffect(() => {
+    async function load() {
+      const favs = await getFavourites();
+      setFavouritesList(favs);
+    }
+    load();
+  }, [setFavouritesList]);
 
   if (!favouritesList) return null;
 
