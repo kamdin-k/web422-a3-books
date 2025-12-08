@@ -1,66 +1,56 @@
-import { useRouter } from "next/router";
-import { useEffect } from "react";
-import { useAtom } from "jotai";
-import { favouritesAtom, searchHistoryAtom, userAtom } from "@/store";
-import { isAuthenticated, readToken } from "@/lib/authenticate";
-import { getFavourites } from "@/lib/userData";
+import { getToken } from "./authenticate";
 
-export default function RouteGuard({ children }) {
-  const router = useRouter();
-  const [, setFavouritesList] = useAtom(favouritesAtom);
-  const [, setSearchHistory] = useAtom(searchHistoryAtom);
-  const [, setUser] = useAtom(userAtom);
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-  const publicPaths = ["/login", "/register", "/about"];
+async function apiRequest(method, path) {
+  try {
+    const token = getToken();
+    if (!token) return [];
 
-  function authCheck(url) {
-    const path = url.split("?")[0];
-    if (!publicPaths.includes(path) && !isAuthenticated()) {
-      router.push("/login");
+    const res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `JWT ${token}`
+      }
+    });
+
+    if (res.status === 200) {
+      return await res.json();
+    } else {
+      return [];
     }
+  } catch {
+    return [];
   }
+}
 
-  useEffect(() => {
-    const loadAppState = async () => {
-      if (isAuthenticated()) {
-        // set user from token
-        setUser(readToken());
+export async function getFavourites() {
+  return apiRequest("GET", "/favourites");
+}
 
-        try {
-          const favs = await getFavourites();
-          setFavouritesList(favs || []);
-        } catch (err) {
-          console.error("Error loading favourites:", err);
-          setFavouritesList([]);
-        }
-      } else {
-        setUser(null);
-        setFavouritesList([]);
-      }
+export async function addToFavourites(id) {
+  return apiRequest("PUT", `/favourites/${id}`);
+}
 
-      if (typeof window !== "undefined") {
-        const history = localStorage.getItem("history");
-        if (history) {
-          setSearchHistory(JSON.parse(history));
-        }
-      }
-    };
+export async function removeFromFavourites(id) {
+  return apiRequest("DELETE", `/favourites/${id}`);
+}
 
-    // run on first load
-    authCheck(router.asPath);
-    loadAppState();
+export function getHistory() {
+  if (typeof window === "undefined") return [];
+  const history = localStorage.getItem("history");
+  return history ? JSON.parse(history) : [];
+}
 
-    // re-run on every route change (after login/logout, going to /books, etc.)
-    const handleRouteChange = (url) => {
-      authCheck(url);
-      loadAppState();
-    };
+export function addHistory(entry) {
+  if (typeof window === "undefined") return;
+  const history = getHistory();
+  history.push(entry);
+  localStorage.setItem("history", JSON.stringify(history));
+}
 
-    router.events.on("routeChangeComplete", handleRouteChange);
-    return () => {
-      router.events.off("routeChangeComplete", handleRouteChange);
-    };
-  }, [router, router.events, setFavouritesList, setSearchHistory, setUser]);
-
-  return children;
+export function clearHistory() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("history");
 }
