@@ -1,3 +1,17 @@
+/*********************************************************************************
+* WEB422 – Assignment 3
+*
+* I declare that this assignment is my own work in accordance with Seneca's
+* Academic Integrity Policy:
+*
+* https://www.senecapolytechnic.ca/about/policies/academic-integrity-policy.html
+*
+* Name: kamdin kianpour    Student ID: 134281229    Date: 7 dec
+*
+* Vercel App (Deployed) Link: https://web422-a3-books.vercel.app/register
+*
+********************************************************************************/
+
 import useSWR from 'swr';
 import Link from 'next/link';
 import Error from 'next/error';

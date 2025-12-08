@@ -12,21 +12,32 @@ export default function Books() {
   const [pageData, setPageData] = useState([]);
 
   const qs = new URLSearchParams(router.query).toString();
+
+  let query = { ...router.query };
+  if (query.page) delete query.page;
+  let qParts = [];
+  Object.entries(query).forEach(([key, value]) => {
+    if (value) qParts.push(`${key}:${value}`);
+  });
+  let searchQuery = qParts.length > 0 ? qParts.join(' AND ') : '';
+
   const { data, error, isLoading } = useSWR(
-    `https://openlibrary.org/search.json?${qs}&page=${page}&limit=10`,
+    `https://openlibrary.org/search.json?q=${encodeURIComponent(
+      searchQuery
+    )}&page=${page}&limit=10`,
     fetcher
   );
 
   useEffect(() => {
-    setPage(1); 
+    setPage(1);
   }, [qs]);
 
   useEffect(() => {
     if (data?.docs) setPageData(data.docs);
   }, [data]);
 
-  const previous = () => setPage(p => (p > 1 ? p - 1 : p));
-  const next = () => setPage(p => p + 1);
+  const previous = () => setPage((p) => (p > 1 ? p - 1 : p));
+  const next = () => setPage((p) => p + 1);
 
   const goToWork = (book) => {
     const workId = (book.key || '').split('/').pop();
@@ -34,8 +45,10 @@ export default function Books() {
   };
 
   const subtext =
-    Object.entries(router.query).filter(([, v]) => v)
-      .map(([k, v]) => `${k}=${v}`).join(' • ') || 'Showing results';
+    Object.entries(router.query)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(' • ') || 'Showing results';
 
   return (
     <>
@@ -43,10 +56,19 @@ export default function Books() {
       {error && <div className="alert alert-danger">Error loading results.</div>}
       {isLoading && <div className="alert alert-info">Loading…</div>}
       <Table striped hover responsive>
-        <thead><tr><th>Title</th><th>Published</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Published</th>
+          </tr>
+        </thead>
         <tbody>
           {pageData.map((book) => (
-            <tr key={book.key} onClick={() => goToWork(book)} style={{cursor:'pointer'}}>
+            <tr
+              key={book.key}
+              onClick={() => goToWork(book)}
+              style={{ cursor: 'pointer' }}
+            >
               <td>{book.title}</td>
               <td>{book.first_publish_year ?? 'N/A'}</td>
             </tr>
