@@ -1,118 +1,72 @@
-import { useForm } from "react-hook-form";
-import { useRouter } from "next/router";
 import { useState } from "react";
-import { setToken, readToken } from "../lib/authenticate";
+import { useRouter } from "next/router";
+import { useAtom } from "jotai";
+import { favouritesAtom } from "@/store";
+import { authenticateUser } from "@/lib/authenticate";
+import { getFavourites } from "@/lib/userData";
+import { Alert, Form, Button } from "react-bootstrap";
 
 export default function Login() {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
-
   const router = useRouter();
-  const [serverError, setServerError] = useState(null);
+  const [, setFavouritesList] = useAtom(favouritesAtom);
+
+  const [user, setUser] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = async (data) => {
-    setServerError(null);
+  async function updateAtom() {
+    setFavouritesList(await getFavourites());
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setErrorMsg("");
     setLoading(true);
 
-    const payload = {
-      userName: data.userName,
-      password: data.password,
-    };
-
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      let json = {};
-      try {
-        json = await res.json();
-      } catch (_) {}
-
-      if (!res.ok) {
-        let msg = json.message || "Login failed";
-        if (typeof msg === "object") {
-          msg = msg.message || "Login failed";
-        }
-        setServerError(msg);
-        setLoading(false);
-        return;
-      }
-
-      // Expecting { message: "...", token: "JWT..." }
-      const token = json.token;
-      if (!token) {
-        setServerError("Login failed: token not returned.");
-        setLoading(false);
-        return;
-      }
-
-      // Save token using the provided authenticate library
-      setToken(token);
-
-      // Optional: you can log decoded token to be sure
-      console.log("Logged in as:", readToken());
-
-      // Go to favourites (or home) after login
-      router.push("/favourites");
+      await authenticateUser(user, password);
+      await updateAtom();
+      router.push("/");
     } catch (err) {
-      console.error("Login network error:", err);
-      setServerError("Network error, please try again.");
+      console.error(err);
+      setErrorMsg(err.message || "Unable to log in");
+    } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="container mt-5">
+    <>
       <h1>Login</h1>
 
-      {serverError && (
-        <div className="alert alert-danger" role="alert">
-          {serverError}
-        </div>
-      )}
+      {errorMsg && <Alert variant="danger">{errorMsg}</Alert>}
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <div className="mb-3">
-          <label className="form-label">User Name</label>
-          <input
-            className="form-control"
-            {...register("userName", { required: "User name is required" })}
+      <Form onSubmit={handleSubmit}>
+        <Form.Group className="mb-3" controlId="userName">
+          <Form.Label>User Name</Form.Label>
+          <Form.Control
+            type="text"
+            value={user}
+            onChange={(e) => setUser(e.target.value)}
+            required
           />
-          {errors.userName && (
-            <div className="text-danger">{errors.userName.message}</div>
-          )}
-        </div>
+        </Form.Group>
 
-        <div className="mb-3">
-          <label className="form-label">Password</label>
-          <input
+        <Form.Group className="mb-3" controlId="password">
+          <Form.Label>Password</Form.Label>
+          <Form.Control
             type="password"
-            className="form-control"
-            {...register("password", { required: "Password is required" })}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
           />
-          {errors.password && (
-            <div className="text-danger">{errors.password.message}</div>
-          )}
-        </div>
+        </Form.Group>
 
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={loading}
-        >
+        <Button type="submit" variant="primary" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
-    </div>
+        </Button>
+      </Form>
+    </>
   );
 }
