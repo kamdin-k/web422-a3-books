@@ -1,18 +1,13 @@
-// pages/login.js
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { Container, Row, Col, Form, Button, Alert } from "react-bootstrap";
 import { authenticateUser } from "@/lib/authenticate";
-import { getFavourites } from "@/lib/userData";
-import { useAtom } from "jotai";
-import { favouritesAtom } from "@/store";
+import { Container, Row, Col, Form, Button, Alert } from "react-bootstrap";
 
 export default function Login() {
   const router = useRouter();
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [warning, setWarning] = useState("");
-  const [, setFavouritesList] = useAtom(favouritesAtom);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,13 +15,7 @@ export default function Login() {
 
     try {
       await authenticateUser(userName, password);
-
-      // 🔹 pull favourites from your Mongo API and store them in Jotai
-      const favs = await getFavourites();
-      setFavouritesList(favs);
-
-      // go to books (or favourites – either is fine)
-      router.push("/books");
+      router.push("/");
     } catch (err) {
       setWarning(err.message);
     }
