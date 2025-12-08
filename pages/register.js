@@ -33,19 +33,17 @@ export default function Register() {
         }
       );
 
+      let json = {};
+      try {
+        json = await res.json();
+      } catch (_) {}
+
       if (!res.ok) {
-        let msg = "Registration failed";
-        try {
-          const json = await res.json();
-          msg =
-            json.message ||
-            json.error ||
-            (Array.isArray(json.errors) && json.errors[0]?.msg) ||
-            msg;
-          console.log("Register API response:", res.status, json);
-        } catch (e) {
-          console.log("Error parsing JSON from register:", e);
-        }
+        let msg =
+          json.message ||
+          json.error ||
+          (Array.isArray(json.errors) && json.errors[0]?.msg) ||
+          "Registration failed";
         setServerError(msg);
         setLoading(false);
         return;
@@ -53,7 +51,6 @@ export default function Register() {
 
       router.push("/login");
     } catch (err) {
-      console.error("Network error:", err);
       setServerError("Network error, please try again.");
       setLoading(false);
     }
@@ -90,6 +87,9 @@ export default function Register() {
               minLength: { value: 6, message: "Minimum 6 characters" }
             })}
           />
+          {errors.password && (
+            <div className="text-danger">{errors.password.message}</div>
+          )}
         </div>
 
         <div className="mb-3">
@@ -101,6 +101,11 @@ export default function Register() {
               required: "Please confirm your password"
             })}
           />
+          {errors.confirmPassword && (
+            <div className="text-danger">
+              {errors.confirmPassword.message}
+            </div>
+          )}
         </div>
 
         <button type="submit" className="btn btn-primary" disabled={loading}>

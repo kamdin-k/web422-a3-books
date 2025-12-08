@@ -7,7 +7,7 @@ export default function Login() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors }
   } = useForm();
 
   const router = useRouter();
@@ -20,16 +20,16 @@ export default function Login() {
 
     const payload = {
       userName: data.userName,
-      password: data.password,
+      password: data.password
     };
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/login`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/user/login`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payload)
         }
       );
 
@@ -48,7 +48,6 @@ export default function Login() {
         return;
       }
 
-      // Expecting { message: "...", token: "JWT..." }
       const token = json.token;
       if (!token) {
         setServerError("Login failed: token not returned.");
@@ -56,16 +55,10 @@ export default function Login() {
         return;
       }
 
-      // Save token using the provided authenticate library
       setToken(token);
-
-      // Optional: you can log decoded token to be sure
       console.log("Logged in as:", readToken());
-
-      // Go to favourites (or home) after login
       router.push("/favourites");
     } catch (err) {
-      console.error("Login network error:", err);
       setServerError("Network error, please try again.");
       setLoading(false);
     }
