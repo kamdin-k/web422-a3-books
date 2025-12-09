@@ -7,7 +7,7 @@ import { getFavourites } from "@/lib/userData";
 
 export default function RouteGuard({ children }) {
   const router = useRouter();
-  const [, setFavouritesList] = useAtom(favouritesAtom);
+  const [, setFavourites] = useAtom(favouritesAtom);
   const [, setSearchHistory] = useAtom(searchHistoryAtom);
 
   function authCheck(url) {
@@ -18,34 +18,30 @@ export default function RouteGuard({ children }) {
     }
   }
 
-  useEffect(() => {
-    async function init() {
-      if (isAuthenticated()) {
-        const favs = await getFavourites();
-        setFavouritesList(favs);
-      }
-      if (typeof window !== "undefined") {
-        const history = localStorage.getItem("history");
-        if (history) {
-          setSearchHistory(JSON.parse(history));
-        }
+  async function loadInitialData() {
+    if (isAuthenticated()) {
+      const favs = await getFavourites();
+      setFavourites(favs);
+    }
+    if (typeof window !== "undefined") {
+      const history = localStorage.getItem("history");
+      if (history) {
+        setSearchHistory(JSON.parse(history));
       }
     }
+  }
 
-    init();
+  useEffect(() => {
     authCheck(router.pathname);
-
+    loadInitialData();
     const handleRouteChange = (url) => {
       authCheck(url);
-      init();
     };
-
     router.events.on("routeChangeComplete", handleRouteChange);
-
     return () => {
       router.events.off("routeChangeComplete", handleRouteChange);
     };
-  }, [router.pathname, router.events, setFavouritesList, setSearchHistory]);
+  }, []);
 
   return children;
 }
