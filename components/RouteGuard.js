@@ -1,47 +1,52 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import { useAtom } from "jotai";
-import { favouritesAtom, searchHistoryAtom } from "@/store";
-import { isAuthenticated } from "@/lib/authenticate";
+import { favouritesAtom, searchHistoryAtom, userAtom } from "@/store";
+import { isAuthenticated, readToken } from "@/lib/authenticate";
 import { getFavourites } from "@/lib/userData";
 
 export default function RouteGuard({ children }) {
   const router = useRouter();
-  const [, setFavourites] = useAtom(favouritesAtom);
+  const [, setFavouritesList] = useAtom(favouritesAtom);
   const [, setSearchHistory] = useAtom(searchHistoryAtom);
-
-  function authCheck(url) {
-    const publicPaths = ["/login", "/register", "/about"];
-    const path = url.split("?")[0];
-    if (!publicPaths.includes(path) && !isAuthenticated()) {
-      router.push("/login");
-    }
-  }
-
-  async function loadInitialData() {
-    if (isAuthenticated()) {
-      const favs = await getFavourites();
-      setFavourites(favs);
-    }
-    if (typeof window !== "undefined") {
-      const history = localStorage.getItem("history");
-      if (history) {
-        setSearchHistory(JSON.parse(history));
-      }
-    }
-  }
+  const [, setUser] = useAtom(userAtom);
 
   useEffect(() => {
+    async function init() {
+      if (isAuthenticated()) {
+        const token = readToken();
+        setUser({ userName: token.userName });
+        const favs = await getFavourites();
+        setFavouritesList(favs);
+      } else {
+        setUser(null);
+        setFavouritesList([]);
+      }
+
+      if (typeof window !== "undefined") {
+        const history = localStorage.getItem("history");
+        if (history) {
+          setSearchHistory(JSON.parse(history));
+        }
+      }
+    }
+
+    function authCheck(url) {
+      const publicPaths = ["/", "/about", "/login", "/register"];
+      const path = url.split("?")[0];
+      if (!isAuthenticated() && !publicPaths.includes(path)) {
+        router.push("/login");
+      }
+    }
+
+    init();
     authCheck(router.pathname);
-    loadInitialData();
-    const handleRouteChange = (url) => {
-      authCheck(url);
-    };
-    router.events.on("routeChangeComplete", handleRouteChange);
+    router.events.on("routeChangeComplete", authCheck);
+
     return () => {
-      router.events.off("routeChangeComplete", handleRouteChange);
+      router.events.off("routeChangeComplete", authCheck);
     };
-  }, []);
+  }, [router, setFavouritesList, setSearchHistory, setUser]);
 
   return children;
 }

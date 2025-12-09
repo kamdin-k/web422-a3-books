@@ -12,33 +12,46 @@
 *
 ********************************************************************************/
 
-import useSWR from 'swr';
-import Link from 'next/link';
-import Error from 'next/error';
+import Link from "next/link";
+import { Card, Button } from "react-bootstrap";
+import { useAtom } from "jotai";
+import { favouritesAtom } from "@/store";
+import { addToFavourites, removeFromFavourites } from "@/lib/userData";
 
-const fetcher = (...a) => fetch(...a).then(r => r.json());
+export default function BookCard({ workId, title, cover_i, first_publish_year }) {
+  const [favouritesList, setFavouritesList] = useAtom(favouritesAtom);
+  const isFavourited = favouritesList && favouritesList.includes(workId);
 
-export default function BookCard({ workId }) {
-  const { data, error } = useSWR(
-    workId ? `https://openlibrary.org/works/${workId}.json` : null,
-    fetcher
-  );
-  if (error) return <Error statusCode={404} />;
-  if (!data) return null;
+  async function handleFavourite() {
+    if (isFavourited) {
+      const updated = await removeFromFavourites(workId);
+      setFavouritesList(updated);
+    } else {
+      const updated = await addToFavourites(workId);
+      setFavouritesList(updated);
+    }
+  }
 
-  const coverId = data.covers?.[0];
-  const imgSrc = coverId
-    ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`
-    : 'https://placehold.co/300x450?text=No+Cover';
+  const coverUrl = cover_i
+    ? `https://covers.openlibrary.org/b/id/${cover_i}-M.jpg`
+    : "https://via.placeholder.com/180x280?text=No+Cover";
 
   return (
-    <div className="card h-100">
-      <img className="card-img-top" src={imgSrc} alt={data.title || ''} />
-      <div className="card-body">
-        <h5 className="card-title">{data.title || ''}</h5>
-        <p className="card-text">{data.first_publish_date || 'N/A'}</p>
-        <Link className="btn btn-outline-primary" href={`/works/${workId}`}>Details</Link>
-      </div>
-    </div>
+    <Card>
+      <Card.Img variant="top" src={coverUrl} />
+      <Card.Body>
+        <Card.Title>{title}</Card.Title>
+        <Card.Text>First published: {first_publish_year || "Unknown"}</Card.Text>
+        <Link href={`/works/${workId}`} passHref legacyBehavior>
+          <Button className="me-2">View Details</Button>
+        </Link>
+        <Button
+          variant={isFavourited ? "primary" : "outline-primary"}
+          onClick={handleFavourite}
+        >
+          {isFavourited ? "Favourite (added)" : "+ Favourite"}
+        </Button>
+      </Card.Body>
+    </Card>
   );
 }
