@@ -1,15 +1,14 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import { useAtom } from "jotai";
-import { favouritesAtom, searchHistoryAtom, userAtom } from "@/store";
-import { isAuthenticated, readToken } from "@/lib/authenticate";
+import { favouritesAtom, searchHistoryAtom } from "@/store";
+import { isAuthenticated } from "@/lib/authenticate";
 import { getFavourites } from "@/lib/userData";
 
 export default function RouteGuard({ children }) {
   const router = useRouter();
   const [, setFavouritesList] = useAtom(favouritesAtom);
   const [, setSearchHistory] = useAtom(searchHistoryAtom);
-  const [, setUser] = useAtom(userAtom);
 
   function authCheck(url) {
     const publicPaths = ["/login", "/register", "/about"];
@@ -22,17 +21,9 @@ export default function RouteGuard({ children }) {
   useEffect(() => {
     async function init() {
       if (isAuthenticated()) {
-        const token = readToken();
-        if (token && token.userName) {
-          setUser(token.userName);
-        }
         const favs = await getFavourites();
         setFavouritesList(favs);
-      } else {
-        setUser(null);
-        setFavouritesList([]);
       }
-
       if (typeof window !== "undefined") {
         const history = localStorage.getItem("history");
         if (history) {
@@ -54,7 +45,7 @@ export default function RouteGuard({ children }) {
     return () => {
       router.events.off("routeChangeComplete", handleRouteChange);
     };
-  }, [router.pathname, router.events, setFavouritesList, setSearchHistory, setUser]);
+  }, [router.pathname, router.events, setFavouritesList, setSearchHistory]);
 
   return children;
 }
