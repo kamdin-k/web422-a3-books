@@ -1,6 +1,7 @@
 import { atom } from "jotai";
 import { addToFavourites, removeFromFavourites } from "@/lib/userData";
 
+export const userAtom = atom(null);
 export const favouritesAtom = atom([]);
 export const searchHistoryAtom = atom([]);
 
