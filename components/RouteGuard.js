@@ -1,52 +1,44 @@
-import { useRouter } from "next/router";
 import { useEffect } from "react";
+import { useRouter } from "next/router";
 import { useAtom } from "jotai";
 import { favouritesAtom, searchHistoryAtom, userAtom } from "@/store";
+import { getFavourites, getHistory } from "@/lib/userData";
 import { isAuthenticated, readToken } from "@/lib/authenticate";
-import { getFavourites } from "@/lib/userData";
 
 export default function RouteGuard({ children }) {
   const router = useRouter();
   const [, setFavouritesList] = useAtom(favouritesAtom);
   const [, setSearchHistory] = useAtom(searchHistoryAtom);
-  const [, setUser] = useAtom(userAtom);
+  const [user, setUser] = useAtom(userAtom);
 
   useEffect(() => {
-    async function init() {
-      if (isAuthenticated()) {
-        const token = readToken();
-        setUser({ userName: token.userName });
-        const favs = await getFavourites();
-        setFavouritesList(favs);
-      } else {
-        setUser(null);
-        setFavouritesList([]);
-      }
+    if (isAuthenticated()) {
+      const tokenData = readToken();
 
-      if (typeof window !== "undefined") {
-        const history = localStorage.getItem("history");
-        if (history) {
-          setSearchHistory(JSON.parse(history));
-        }
-      }
-    }
+      if (!user || user.userName !== tokenData.userName) {
+        setUser({
+          userName: tokenData.userName,
+          email: tokenData.email || ""
+        });
 
-    function authCheck(url) {
-      const publicPaths = ["/", "/about", "/login", "/register"];
-      const path = url.split("?")[0];
-      if (!isAuthenticated() && !publicPaths.includes(path)) {
+        getFavourites().then(favs => {
+          setFavouritesList(Array.isArray(favs) ? favs : []);
+        });
+
+        getHistory().then(history => {
+          setSearchHistory(Array.isArray(history) ? history : []);
+        });
+      }
+    } else {
+      setUser(null);
+      setFavouritesList([]);
+      setSearchHistory([]);
+
+      if (router.pathname === "/favourites" || router.pathname === "/history") {
         router.push("/login");
       }
     }
-
-    init();
-    authCheck(router.pathname);
-    router.events.on("routeChangeComplete", authCheck);
-
-    return () => {
-      router.events.off("routeChangeComplete", authCheck);
-    };
-  }, [router, setFavouritesList, setSearchHistory, setUser]);
+  }, [router.pathname]);
 
   return children;
 }

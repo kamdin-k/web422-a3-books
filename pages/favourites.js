@@ -1,43 +1,46 @@
-// pages/favourites.js
 import { useEffect } from "react";
+import { Row, Col, Card } from "react-bootstrap";
 import { useAtom } from "jotai";
 import { favouritesAtom } from "@/store";
-import PageHeader from "@/components/PageHeader";
-import BookCard from "@/components/BookCard";
 import { getFavourites } from "@/lib/userData";
+import { isAuthenticated } from "@/lib/authenticate";
 
 export default function Favourites() {
   const [favouritesList, setFavouritesList] = useAtom(favouritesAtom);
 
   useEffect(() => {
-    async function load() {
-      const favs = await getFavourites();
-      setFavouritesList(favs);
+    if (isAuthenticated()) {
+      getFavourites().then(favs => {
+        setFavouritesList(Array.isArray(favs) ? favs : []);
+      });
+    } else {
+      setFavouritesList([]);
     }
-    load();
-  }, [setFavouritesList]);
+  }, []);
 
-  if (!favouritesList) return null;
-
-  if (!favouritesList.length) {
+  if (!favouritesList || favouritesList.length === 0) {
     return (
-      <PageHeader
-        text="Nothing Here"
-        subtext="Add some books to your favourites."
-      />
+      <Card className="mt-4">
+        <Card.Body>
+          <Card.Title>Nothing Here</Card.Title>
+          <Card.Text>Add some books to your favourites.</Card.Text>
+        </Card.Body>
+      </Card>
     );
   }
 
   return (
-    <>
-      <PageHeader text="Favourites" subtext="Your Favourite Books" />
-      <div className="row gy-4">
-        {favouritesList.map((workId) => (
-          <div className="col-lg-3 col-md-6" key={workId}>
-            <BookCard workId={workId} />
-          </div>
-        ))}
-      </div>
-    </>
+    <Row className="mt-4">
+      {favouritesList.map(workId => (
+        <Col md={3} lg={2} key={workId} className="mb-4">
+          <Card>
+            <Card.Body>
+              <Card.Title>{workId}</Card.Title>
+              <Card.Text>This is a favourited work.</Card.Text>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
   );
 }
